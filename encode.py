@@ -351,13 +351,16 @@ def read_progress(proc: subprocess.Popen, prog: Progress) -> None:
             try:
                 val = int(v)
                 if val >= 0:
-                    prog.out_time_ms = val
+                    prog.out_time_ms = val // 1000  # ffmpeg reports µs despite the name
             except ValueError:
                 pass
         elif k == "fps" and v and v != "0.00":
             prog.fps = v
         elif k == "speed" and v.strip():
-            prog.speed = v.strip()
+            try:
+                prog.speed = f"{float(v.strip().rstrip('x')):.1f}x"
+            except ValueError:
+                prog.speed = v.strip()
 
 
 def drain_stderr(proc: subprocess.Popen, buf: list) -> None:
