@@ -203,9 +203,13 @@ def make_display(
         except (ValueError, TypeError):
             eta = "--:--:--"
 
-        info = Text()
-        info.append(job.input.name, style="bold")
-        info.append(f"  {job.height}p · CRF {job.crf} · {job.preset}", style="dim")
+        info = Table(box=None, padding=0, show_header=False, expand=True)
+        info.add_column("name", ratio=1, no_wrap=True, overflow="ellipsis")
+        info.add_column("meta", no_wrap=True)
+        info.add_row(
+            Text(job.input.name, style="bold"),
+            Text(f"  {job.height}p · CRF {job.crf} · {job.preset}", style="dim"),
+        )
 
         bar_line = Text()
         bar_line.append_text(bar)
@@ -340,7 +344,7 @@ def build_cmd(job: Job, vf: Optional[str]) -> List[str]:
         cmd += ["-x265-params", "psy-rd=1.0:psy-rdoq=0.5"]
     if vf:
         cmd += ["-vf", vf]
-    cmd += ["-c:a", "copy", "-async", "1", "-c:s", "copy", str(job.output), "-y"]
+    cmd += ["-max_interleave_delta", "0", "-c:a", "copy", "-c:s", "copy", str(job.output), "-y"]
     return cmd
 
 
@@ -467,6 +471,9 @@ def main():
         for idx, job in enumerate(jobs):
             if stop_ev.is_set():
                 break
+
+            prog = Progress()
+            live.update(make_display(jobs, idx, prog, paused))
 
             # ── probe ──
             h, w, dur_s = probe_file(job.input)
