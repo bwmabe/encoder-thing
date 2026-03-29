@@ -467,7 +467,7 @@ def main():
     paused  = False
     prog    = Progress()
 
-    with Live(console=console, refresh_per_second=10, screen=False) as live:
+    with Live(console=console, refresh_per_second=10, screen=True) as live:
         for idx, job in enumerate(jobs):
             if stop_ev.is_set():
                 break
