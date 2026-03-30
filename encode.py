@@ -417,7 +417,7 @@ def parse_args():
                    help="Deinterlace filter (yadif, bwdif, estdif, w3fdif)")
     p.add_argument("--crop", nargs="?", const=True, default=None, metavar="VALUE",
                    help="Auto-detect crop bars, or supply manual crop=W:H:X:Y")
-    p.add_argument("-f", "--overwrite", action="store_true",
+    p.add_argument("-f", "--overwrite", "--force", action="store_true",
                    help="Re-encode even if output file already exists (default: skip existing)")
     p.add_argument("--clean", action="store_true",
                    help="Delete all existing output files upfront before encoding (frees space in one shot)")
