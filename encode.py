@@ -417,6 +417,8 @@ def parse_args():
                    help="Deinterlace filter (yadif, bwdif, estdif, w3fdif)")
     p.add_argument("--crop", nargs="?", const=True, default=None, metavar="VALUE",
                    help="Auto-detect crop bars, or supply manual crop=W:H:X:Y")
+    p.add_argument("-f", "--overwrite", action="store_true",
+                   help="Re-encode even if output file already exists (default: skip existing)")
     args = p.parse_args()
 
     if args.y:
@@ -475,6 +477,13 @@ def main():
             prog = Progress()
             live.update(make_display(jobs, idx, prog, paused))
             live.refresh()
+
+            # ── skip if output exists and --overwrite not set ──
+            if not args.overwrite and job.output.exists():
+                job.status = Status.SKIPPED
+                live.update(make_display(jobs, idx, prog, paused))
+                live.refresh()
+                continue
 
             # ── probe ──
             h, w, dur_s = probe_file(job.input)
