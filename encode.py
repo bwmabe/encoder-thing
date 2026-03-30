@@ -419,6 +419,8 @@ def parse_args():
                    help="Auto-detect crop bars, or supply manual crop=W:H:X:Y")
     p.add_argument("-f", "--overwrite", action="store_true",
                    help="Re-encode even if output file already exists (default: skip existing)")
+    p.add_argument("--clean", action="store_true",
+                   help="Delete all existing output files upfront before encoding (frees space in one shot)")
     args = p.parse_args()
 
     if args.y:
@@ -458,6 +460,14 @@ def main():
     if not jobs:
         print("No input files found.", file=sys.stderr)
         sys.exit(1)
+
+    if args.clean:
+        removed = [j.output for j in jobs if j.output.exists()]
+        for f in removed:
+            f.unlink()
+            print(f"removed: {f}")
+        if not removed:
+            print("nothing to clean")
 
     cmd_q   = queue.Queue()
     stop_ev = threading.Event()
