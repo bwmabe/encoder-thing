@@ -467,13 +467,14 @@ def main():
     paused  = False
     prog    = Progress()
 
-    with Live(console=console, refresh_per_second=10, screen=True) as live:
+    with Live(console=console, auto_refresh=False, screen=True) as live:
         for idx, job in enumerate(jobs):
             if stop_ev.is_set():
                 break
 
             prog = Progress()
             live.update(make_display(jobs, idx, prog, paused))
+            live.refresh()
 
             # ── probe ──
             h, w, dur_s = probe_file(job.input)
@@ -492,6 +493,7 @@ def main():
                 else:
                     job.status = Status.DETECTING
                     live.update(make_display(jobs, idx, prog, paused))
+                    live.refresh()
                     crop = detect_crop(job.input)
                     # if crop is a no-op, discard it
                     if crop:
@@ -512,6 +514,7 @@ def main():
             if skip_this or stop_ev.is_set():
                 job.status = Status.SKIPPED
                 live.update(make_display(jobs, idx, prog, paused))
+                live.refresh()
                 continue
 
             # ── start ffmpeg ──
@@ -556,6 +559,8 @@ def main():
                                 paused_at = None
                             paused    = False
                             job.status = Status.ENCODING
+                        live.update(make_display(jobs, idx, prog, paused))
+                        live.refresh()
 
                     elif ch == "s":
                         skip_requested = True
@@ -571,10 +576,12 @@ def main():
                             paused = False
                         proc.kill()
 
-                now = time.monotonic()
-                cur_pause = (now - paused_at) if paused_at else 0.0
-                job.elapsed = now - start_time - paused_secs - cur_pause
-                live.update(make_display(jobs, idx, prog, paused))
+                if not paused:
+                    now = time.monotonic()
+                    cur_pause = (now - paused_at) if paused_at else 0.0
+                    job.elapsed = now - start_time - paused_secs - cur_pause
+                    live.update(make_display(jobs, idx, prog, paused))
+                    live.refresh()
                 time.sleep(0.05)
 
             prog_thread.join(timeout=2)
@@ -598,6 +605,7 @@ def main():
                 job.error  = "".join(stderr_buf).strip()
 
             live.update(make_display(jobs, idx, prog, paused))
+            live.refresh()
 
             if stop_ev.is_set():
                 # mark remaining as skipped for the summary
@@ -607,6 +615,7 @@ def main():
 
         # ── final display ──
         live.update(make_display(jobs, max(0, len(jobs) - 1), prog, False, all_done=True))
+        live.refresh()
 
     stop_ev.set()
 
