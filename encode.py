@@ -437,7 +437,7 @@ def build_jobs(args) -> List[Job]:
     for inp in args.inputs:
         path = Path(inp)
         if path.is_file():
-            out_dir = Path(args.output_dir) if args.output_dir else Path("converted")
+            out_dir = Path(args.output_dir) if args.output_dir else path.parent / "converted"
             out_dir.mkdir(parents=True, exist_ok=True)
             jobs.append(Job(input=path, output=out_dir / path.name))
         elif path.is_dir():
