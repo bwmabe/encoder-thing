@@ -224,7 +224,8 @@ def make_display(
         stats.append("  ·  ETA ", style="dim")
         stats.append(eta, style="yellow bold" if paused else "bright_white bold")
 
-        title = "[yellow bold]⏸  Paused[/yellow bold]" if paused else "[cyan bold]▶  Now Encoding[/cyan bold]"
+        counter = f"[dim] ({idx + 1}/{n})[/dim]"
+        title = f"[yellow bold]⏸  Paused[/yellow bold]{counter}" if paused else f"[cyan bold]▶  Now Encoding[/cyan bold]{counter}"
         prog_panel = Panel(Group(info, bar_line, stats), title=title, border_style="bright_black")
 
     elif job and job.status == Status.DETECTING:
