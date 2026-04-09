@@ -126,7 +126,10 @@ def make_display(
     tbl.add_column("status", width=10, justify="right")
     tbl.add_column("time",   width=8,  justify="right")
 
-    term_h = os.get_terminal_size(fallback=(80, 24)).lines
+    try:
+        term_h = os.get_terminal_size().lines
+    except OSError:
+        term_h = 24
     # overhead: queue panel borders (2) + filler rows (2) + progress panel (5) + footer (1)
     queue_window = max(3, term_h - 10)
 
