@@ -35,7 +35,7 @@ from rich.table import Table
 from rich.text import Text
 
 VIDEO_EXTS = {".mkv", ".mp4", ".avi"}
-QUEUE_WINDOW = 10  # rows visible in the queue panel (keep height stable)
+# QUEUE_WINDOW is computed dynamically from terminal height in make_display
 
 
 # ── data model ────────────────────────────────────────────────────────────────
@@ -126,10 +126,14 @@ def make_display(
     tbl.add_column("status", width=10, justify="right")
     tbl.add_column("time",   width=8,  justify="right")
 
+    term_h = os.get_terminal_size(fallback=(80, 24)).lines
+    # overhead: queue panel borders (2) + filler rows (2) + progress panel (5) + footer (1)
+    queue_window = max(3, term_h - 10)
+
     n = len(jobs)
-    half = QUEUE_WINDOW // 2
-    win_start = max(0, min(idx - half, n - QUEUE_WINDOW))
-    win_end   = min(n, win_start + QUEUE_WINDOW)
+    half = queue_window // 2
+    win_start = max(0, min(idx - half, n - queue_window))
+    win_end   = min(n, win_start + queue_window)
 
     # filler row so the panel height never changes
     def filler():
