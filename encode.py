@@ -147,7 +147,7 @@ def make_display(
         bold = i == idx and job.status in (Status.ENCODING, Status.PAUSED, Status.DETECTING)
         tbl.add_row(
             Text(icon_s, style=icon_c),
-            Text(job.input.name, style="bold" if bold else ""),
+            Text(f"{job.input.parent.name}/{job.input.name}", style="bold" if bold else ""),
             Text(label_s, style=label_c),
             Text(fmt_elapsed(job.elapsed) if job.elapsed > 0 else "", style="dim"),
         )
