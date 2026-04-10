@@ -60,6 +60,8 @@ class Job:
     width:   int    = 0
     crf:     int    = 0
     preset:  str    = ""
+    codec:   str    = "x265"
+    grain:   Optional[int] = None
     error:   str    = ""
 
 
@@ -215,7 +217,7 @@ def make_display(
         info.add_column("meta", no_wrap=True)
         info.add_row(
             Text(job.input.name, style="bold"),
-            Text(f"  {job.height}p · CRF {job.crf} · {job.preset}", style="dim"),
+            Text(f"  {job.height}p · {job.codec} · CRF {job.crf} · {job.preset}", style="dim"),
         )
 
         bar_line = Text()
@@ -342,14 +344,24 @@ def build_cmd(job: Job, vf: Optional[str]) -> List[str]:
         "-loglevel", "error",
         "-progress", "pipe:1",
         "-nostats",
-        "-c:v", "libx265",
-        "-crf", str(job.crf),
-        "-preset", job.preset,
     ]
-    if job.height >= 2000:
-        cmd += ["-x265-params", "hdr10=1:hdr10-opt=1:repeat-headers=1"]
+
+    if job.codec == "av1":
+        cmd += ["-c:v", "libsvtav1", "-crf", str(job.crf), "-preset", job.preset]
+        svtav1_params = []
+        if job.height >= 2000:
+            svtav1_params.append("enable-hdr=1")
+        if job.grain is not None:
+            svtav1_params.append(f"film-grain={job.grain}")
+        if svtav1_params:
+            cmd += ["-svtav1-params", ":".join(svtav1_params)]
     else:
-        cmd += ["-x265-params", "psy-rd=1.0:psy-rdoq=0.5"]
+        cmd += ["-c:v", "libx265", "-crf", str(job.crf), "-preset", job.preset]
+        if job.height >= 2000:
+            cmd += ["-x265-params", "hdr10=1:hdr10-opt=1:repeat-headers=1"]
+        else:
+            cmd += ["-x265-params", "psy-rd=1.0:psy-rdoq=0.5"]
+
     if vf:
         cmd += ["-vf", vf]
     cmd += ["-max_interleave_delta", "0", "-c:a", "copy", "-c:s", "copy", str(job.output), "-y"]
@@ -413,16 +425,20 @@ def parse_args():
     p.add_argument("inputs", nargs="+", metavar="INPUT")
     p.add_argument("-o", dest="output_dir", default=None, metavar="DIR",
                    help="Output directory for file inputs (default: ./converted)")
+    p.add_argument("--codec", choices=["x265", "av1"], default="x265",
+                   help="Video codec: x265 (default) or av1 (libsvtav1)")
     p.add_argument("--crf", type=int, default=None,
-                   help="x265 CRF (default: auto — 18 SD/HD, 20 4K)")
-    p.add_argument("--preset", default="medium",
-                   help="x265 preset (default: medium)")
+                   help="CRF value (default: auto — x265: 18/20, av1: 30/35)")
+    p.add_argument("--preset", default=None,
+                   help="Encoder preset (default: medium for x265, 6 for av1)")
     p.add_argument("--ivtc", action="store_true",
                    help="Inverse telecine (fieldmatch,decimate)")
     p.add_argument("-y", action="store_true",
                    help="IVTC + yadif for residual interlace")
     p.add_argument("--deint", metavar="FILTER",
                    help="Deinterlace filter (yadif, bwdif, estdif, w3fdif)")
+    p.add_argument("--grain", type=int, default=None, metavar="N",
+                   help="AV1 film grain synthesis level (0–50, av1 only)")
     p.add_argument("--crop", nargs="?", const=True, default=None, metavar="VALUE",
                    help="Auto-detect crop bars, or supply manual crop=W:H:X:Y")
     p.add_argument("-f", "--overwrite", "--force", action="store_true",
@@ -507,8 +523,20 @@ def main():
             h, w, dur_s = probe_file(job.input)
             job.height = h
             job.width  = w
-            job.crf    = args.crf if args.crf is not None else (20 if h >= 2000 else 18)
-            job.preset = args.preset
+            job.codec  = args.codec
+            job.grain  = args.grain if args.codec == "av1" else None
+            if args.crf is not None:
+                job.crf = args.crf
+            elif args.codec == "av1":
+                job.crf = 35 if h >= 2000 else 30
+            else:
+                job.crf = 20 if h >= 2000 else 18
+            if args.preset is not None:
+                job.preset = args.preset
+            elif args.codec == "av1":
+                job.preset = "5"
+            else:
+                job.preset = "medium"
 
             # ── crop detection ──
             crop = None
