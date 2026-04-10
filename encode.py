@@ -3,7 +3,8 @@
 encode.py — x265/AV1 batch encoder with TUI
 
 Usage: encode.py [-o dir] [--codec x265|av1] [--crf n] [--preset p] [--ivtc] [-y]
-                 [--deint filter] [--crop [value]] [--grain n] <input|dir> [...]
+                 [--deint filter] [--crop [value]] [--grain n]
+                 [--ffmpeg path] [--ffprobe path] <input|dir> [...]
 
 Keys during encode:
   p / space  pause / resume
@@ -277,11 +278,11 @@ def make_display(
 
 # ── ffmpeg helpers ─────────────────────────────────────────────────────────────
 
-def probe_file(path: Path):
+def probe_file(path: Path, ffprobe: str = "ffprobe"):
     """Return (height, width, duration_s). Falls back to (0, 0, 0.0) on error."""
     try:
         r = subprocess.run(
-            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+            [ffprobe, "-v", "error", "-select_streams", "v:0",
              "-show_entries", "stream=width,height:format=duration",
              "-of", "default=noprint_wrappers=1:nokey=0", str(path)],
             capture_output=True, text=True, timeout=30,
@@ -305,10 +306,10 @@ def probe_file(path: Path):
         return 0, 0, 0.0
 
 
-def detect_crop(path: Path) -> Optional[str]:
+def detect_crop(path: Path, ffmpeg: str = "ffmpeg") -> Optional[str]:
     """Return 'crop=W:H:X:Y' or None."""
     def _run(ss: Optional[str], duration: str) -> Optional[str]:
-        cmd = ["ffmpeg"]
+        cmd = [ffmpeg]
         if ss:
             cmd += ["-ss", ss]
         cmd += ["-i", str(path), "-t", duration,
@@ -336,9 +337,9 @@ def build_vf(args, crop: Optional[str]) -> Optional[str]:
     return ",".join(parts) if parts else None
 
 
-def build_cmd(job: Job, vf: Optional[str]) -> List[str]:
+def build_cmd(job: Job, vf: Optional[str], ffmpeg: str = "ffmpeg") -> List[str]:
     cmd = [
-        "ffmpeg", "-fflags", "+igndts",
+        ffmpeg, "-fflags", "+igndts",
         "-i", str(job.input),
         "-map", "0",
         "-loglevel", "error",
@@ -445,6 +446,10 @@ def parse_args():
                    help="Re-encode even if output file already exists (default: skip existing)")
     p.add_argument("--clean", action="store_true",
                    help="Delete all existing output files upfront before encoding (frees space in one shot)")
+    p.add_argument("--ffmpeg", default="ffmpeg", metavar="PATH",
+                   help="Path to ffmpeg binary (default: ffmpeg)")
+    p.add_argument("--ffprobe", default="ffprobe", metavar="PATH",
+                   help="Path to ffprobe binary (default: ffprobe)")
     args = p.parse_args()
 
     if args.y:
@@ -520,7 +525,7 @@ def main():
                 continue
 
             # ── probe ──
-            h, w, dur_s = probe_file(job.input)
+            h, w, dur_s = probe_file(job.input, args.ffprobe)
             job.height = h
             job.width  = w
             job.codec  = args.codec
@@ -549,7 +554,7 @@ def main():
                     job.status = Status.DETECTING
                     live.update(make_display(jobs, idx, prog, paused))
                     live.refresh()
-                    crop = detect_crop(job.input)
+                    crop = detect_crop(job.input, args.ffmpeg)
                     # if crop is a no-op, discard it
                     if crop:
                         m = re.match(r"crop=(\d+):(\d+):", crop)
@@ -574,7 +579,7 @@ def main():
 
             # ── start ffmpeg ──
             vf  = build_vf(args, crop)
-            cmd = build_cmd(job, vf)
+            cmd = build_cmd(job, vf, args.ffmpeg)
 
             prog       = Progress()
             prog.duration_ms = int(dur_s * 1000) if dur_s else 0

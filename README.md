@@ -48,6 +48,8 @@ encoder-thing --ivtc /shows/rocko/s01 /shows/rocko/s02 /shows/rocko/s03
 | `--crop [value]` | Auto-detect letterbox/pillarbox bars, or supply `crop=W:H:X:Y` |
 | `-f` / `--force` | Re-encode even if output already exists |
 | `--clean` | Delete all existing output files before encoding |
+| `--ffmpeg <path>` | Path to ffmpeg binary (default: `ffmpeg`) |
+| `--ffprobe <path>` | Path to ffprobe binary (default: `ffprobe`) |
 
 Flags can be freely combined — e.g. `--ivtc --crop`, `--codec av1 --crf 28 --grain 8`.
 
