@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-encode.py — x265 batch encoder with TUI
+encode.py — x265/AV1 batch encoder with TUI
 
-Usage: encode.py [-o dir] [--crf n] [--preset p] [--ivtc] [-y]
-                 [--deint filter] [--crop [value]] <input|dir> [...]
+Usage: encode.py [-o dir] [--codec x265|av1] [--crf n] [--preset p] [--ivtc] [-y]
+                 [--deint filter] [--crop [value]] [--grain n] <input|dir> [...]
 
 Keys during encode:
   p / space  pause / resume
