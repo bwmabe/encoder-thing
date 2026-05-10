@@ -62,6 +62,7 @@ class Job:
     preset:  str    = ""
     codec:   str    = "x265"
     grain:   Optional[int] = None
+    tune:    Optional[int] = None
     error:   str    = ""
 
 
@@ -353,6 +354,8 @@ def build_cmd(job: Job, vf: Optional[str], ffmpeg: str = "ffmpeg") -> List[str]:
             svtav1_params.append("enable-hdr=1")
         if job.grain is not None:
             svtav1_params.append(f"film-grain={job.grain}")
+        if job.tune is not None:
+            svtav1_params.append(f"tune={job.tune}")
         if svtav1_params:
             cmd += ["-svtav1-params", ":".join(svtav1_params)]
     else:
@@ -448,6 +451,8 @@ def parse_args():
                    help="Deinterlace filter (yadif, bwdif, estdif, w3fdif)")
     p.add_argument("--grain", type=int, default=None, metavar="N",
                    help="AV1 film grain synthesis level (0–50, av1 only)")
+    p.add_argument("--tune", type=int, default=None, metavar="N",
+                   help="SVT-AV1 tune (0=VQ, 1=PSNR, 2=SSIM, av1 only)")
     p.add_argument("--crop", nargs="?", const=True, default=None, metavar="VALUE",
                    help="Auto-detect crop bars, or supply manual crop=W:H:X:Y")
     p.add_argument("-f", "--overwrite", "--force", action="store_true",
@@ -538,6 +543,7 @@ def main():
             job.width  = w
             job.codec  = args.codec
             job.grain  = args.grain if args.codec == "av1" else None
+            job.tune   = args.tune  if args.codec == "av1" else None
             if args.crf is not None:
                 job.crf = args.crf
             elif args.codec == "av1":
