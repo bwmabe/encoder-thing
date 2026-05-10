@@ -42,6 +42,7 @@ encoder-thing --ivtc /shows/rocko/s01 /shows/rocko/s02 /shows/rocko/s03
 | `--crf <n>` | CRF value (default: auto — x265: 18 SD/HD / 20 4K, AV1: 30 SD/HD / 35 4K) |
 | `--preset <p>` | Encoder preset (default: `medium` for x265, `5` for AV1) |
 | `--grain <n>` | AV1 film grain synthesis level 0–50 (AV1 only) |
+| `--tune <n>` | SVT-AV1 tune: `0` VQ (default), `1` PSNR, `2` SSIM (AV1 only) |
 | `--ivtc` | Inverse telecine (`fieldmatch,decimate`) for 24fps film in 480i |
 | `-y` | IVTC + yadif for irregular pulldown or residual interlace artifacts |
 | `--deint <filter>` | Deinterlace only — `yadif`, `bwdif`, `estdif`, `w3fdif` |
@@ -94,4 +95,6 @@ the best results.
 - `--grain` enables film grain synthesis — the encoder strips grain from the
   source, stores it as metadata, and the decoder re-applies it. Effective range
   is roughly 0–50; 4–10 suits most live-action content.
+- `--tune` sets the SVT-AV1 tuning mode: `0` (VQ, visual quality — default),
+  `1` (PSNR), `2` (SSIM). VQ is the right choice for most content.
 - 4K HDR sources automatically get `enable-hdr=1`.
