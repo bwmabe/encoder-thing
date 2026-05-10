@@ -66,6 +66,9 @@ encoder-thing --codec av1 movie.mkv
 # AV1 with film grain synthesis (good for grainy source material)
 encoder-thing --codec av1 --grain 8 movie.mkv
 
+# AV1 tuned for visual quality (default) — explicit if you want to be sure
+encoder-thing --codec av1 --tune 0 movie.mkv
+
 # AV1 with custom CRF and preset
 encoder-thing --codec av1 --crf 28 --preset 4 movie.mkv
 
