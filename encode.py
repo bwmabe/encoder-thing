@@ -23,7 +23,6 @@ import sys
 import termios
 import threading
 import time
-import tty
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -365,7 +364,7 @@ def build_cmd(job: Job, vf: Optional[str], ffmpeg: str = "ffmpeg") -> List[str]:
 
     if vf:
         cmd += ["-vf", vf]
-    cmd += ["-max_interleave_delta", "0", "-c:a", "copy", "-c:s", "copy", str(job.output), "-y"]
+    cmd += ["-c:a", "copy", "-c:s", "copy", str(job.output), "-y"]
     return cmd
 
 
@@ -401,7 +400,16 @@ def keyboard_reader(cmd_q: queue.Queue, stop_ev: threading.Event) -> None:
     fd  = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
     try:
-        tty.setraw(fd)
+        new = termios.tcgetattr(fd)
+        # Raw input without disabling OPOST — tty.setraw() disables OPOST which
+        # corrupts Rich's stdout rendering (same TTY device shares output flags).
+        new[0] &= ~(termios.BRKINT | termios.ICRNL | termios.INPCK | termios.ISTRIP | termios.IXON)
+        # new[1]: leave OPOST alone so Rich can render correctly
+        new[2] = (new[2] & ~termios.CSIZE) | termios.CS8
+        new[3] &= ~(termios.ECHO | termios.ICANON | termios.IEXTEN | termios.ISIG)
+        new[6][termios.VMIN]  = 1
+        new[6][termios.VTIME] = 0
+        termios.tcsetattr(fd, termios.TCSAFLUSH, new)
         while not stop_ev.is_set():
             if select.select([sys.stdin], [], [], 0.05)[0]:
                 ch = sys.stdin.read(1)
@@ -518,7 +526,7 @@ def main():
             live.refresh()
 
             # ── skip if output exists and --overwrite not set ──
-            if not args.overwrite and job.output.exists():
+            if not args.overwrite and job.output.exists() and job.output.stat().st_size > 0:
                 job.status = Status.SKIPPED
                 live.update(make_display(jobs, idx, prog, paused))
                 live.refresh()
@@ -585,7 +593,7 @@ def main():
             prog.duration_ms = int(dur_s * 1000) if dur_s else 0
 
             stderr_buf: list = []
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
             prog_thread = threading.Thread(target=read_progress, args=(proc, prog), daemon=True)
             err_thread  = threading.Thread(target=drain_stderr,  args=(proc, stderr_buf), daemon=True)
