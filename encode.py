@@ -348,7 +348,8 @@ def build_cmd(job: Job, vf: Optional[str], ffmpeg: str = "ffmpeg") -> List[str]:
     ]
 
     if job.codec == "av1":
-        cmd += ["-c:v", "libsvtav1", "-crf", str(job.crf), "-preset", job.preset]
+        cmd += ["-c:v", "libsvtav1", "-crf", str(job.crf), "-preset", job.preset,
+                "-pix_fmt", "yuv420p10le"]
         svtav1_params = []
         if job.height >= 2000:
             svtav1_params.append("enable-hdr=1")
@@ -359,7 +360,8 @@ def build_cmd(job: Job, vf: Optional[str], ffmpeg: str = "ffmpeg") -> List[str]:
         if svtav1_params:
             cmd += ["-svtav1-params", ":".join(svtav1_params)]
     else:
-        cmd += ["-c:v", "libx265", "-crf", str(job.crf), "-preset", job.preset]
+        cmd += ["-c:v", "libx265", "-crf", str(job.crf), "-preset", job.preset,
+                "-pix_fmt", "yuv420p10le"]
         if job.height >= 2000:
             cmd += ["-x265-params", "hdr10=1:hdr10-opt=1:repeat-headers=1"]
         else:
